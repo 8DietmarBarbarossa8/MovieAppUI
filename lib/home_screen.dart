@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'Movie.dart';
 import 'movie_list_item.dart';
+import 'movie_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -51,12 +52,20 @@ class HomeScreen extends StatelessWidget {
                           .headline6!
                           .copyWith(fontWeight: FontWeight.bold),
                     ),
-                    const TextSpan(text: 'Movies'),
+                    const TextSpan(text: ' movies'),
                   ])),
               const SizedBox(
                 height: 20,
               ),
-              for (var movie in movies) getMovieCard(movie)
+              for (var movie in movies)
+                InkWell(
+                    onTap: () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => MovieScreen(movie: movie)));
+                    },
+                    child: getMovieCard(movie))
             ],
           ),
         ),

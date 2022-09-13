@@ -23,11 +23,18 @@ class MovieListItem extends StatelessWidget {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(15),
           child: Stack(children: [
-            Image.network(
-              image,
-              key: backgroundImageKey,
-              fit: BoxFit.cover,
-            ),
+            Flow(
+                delegate: _ParallaxFlowDelegate(
+                    scrollable: Scrollable.of(context)!,
+                    listItemContext: context,
+                    backgroundImageKey: backgroundImageKey),
+                children: [
+                  Image.network(
+                    image,
+                    key: backgroundImageKey,
+                    fit: BoxFit.cover,
+                  ),
+                ]),
             Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
@@ -70,21 +77,52 @@ class MovieListItem extends StatelessWidget {
 }
 
 class _ParallaxFlowDelegate extends FlowDelegate {
-  final ScrollableState scrollableState;
-  final BuildContext buildContext;
-  final GlobalKey globalKey;
+  final ScrollableState scrollable;
+  final BuildContext listItemContext;
+  final GlobalKey backgroundImageKey;
 
   _ParallaxFlowDelegate(
-      {required this.scrollableState,
-      required this.buildContext,
-      required this.globalKey}) : super(repaint: scrollableState.position);
+      {required this.scrollable,
+      required this.listItemContext,
+      required this.backgroundImageKey})
+      : super(repaint: scrollable.position);
 
   @override
-  void paintChildren(FlowPaintingContext context) {}
+  BoxConstraints getConstraintsForChild(int i, BoxConstraints constraints) {
+    return BoxConstraints.tightFor(width: constraints.maxWidth);
+  }
 
   @override
-  bool shouldRepaint(covariant FlowDelegate oldDelegate) {
-    // TODO: implement shouldRepaint
-    throw UnimplementedError();
+  void paintChildren(FlowPaintingContext context) {
+    final scrollableBox = scrollable.context.findRenderObject() as RenderBox;
+    final listItemBox = listItemContext.findRenderObject() as RenderBox;
+    final listItemOffset = scrollableBox.localToGlobal(
+        listItemBox.size.centerLeft(Offset.zero),
+        ancestor: scrollableBox);
+
+    final viewportDimension = scrollable.position.viewportDimension;
+    final scrollFraction =
+        (listItemOffset.dy / viewportDimension).clamp(0.0, 1.0);
+
+    final verticalAlignment = Alignment(0, scrollFraction * 2 - 1);
+    final backgroundSize =
+        (backgroundImageKey.currentContext!.findRenderObject() as RenderBox)
+            .size;
+    final listItemSize = context.size;
+    final childRect =
+        verticalAlignment.inscribe(backgroundSize, Offset.zero & listItemSize);
+
+    context.paintChild(
+      0,
+      transform:
+          Transform.translate(offset: Offset(0, childRect.top)).transform,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _ParallaxFlowDelegate oldDelegate) {
+    return scrollable != oldDelegate.scrollable ||
+        listItemContext != oldDelegate.listItemContext ||
+        backgroundImageKey != oldDelegate.backgroundImageKey;
   }
 }
